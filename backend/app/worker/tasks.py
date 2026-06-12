@@ -6,7 +6,7 @@ import asyncio
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 # -----------------------------
-
+from app.services.broadcaster import broadcast_slot_state
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import AsyncSessionLocal
@@ -42,9 +42,16 @@ async def promote_user_from_waitlist(ctx, slot_id: str):
     # 2. Open a fresh, isolated database session for the background task
     async with AsyncSessionLocal() as db:
         try:
-            # 3. Reuse our core transactional logic to guarantee safety!
             result = await attempt_booking(db, request)
             logger.info(f"Promotion Successful! Slot booked.")
+            
+            # --- NEW: Broadcast the Waitlist Promotion ---
+            await broadcast_slot_state(
+                slot_id, 
+                "BOOKED", 
+                f"Waitlist promotion executed for user in queue."
+            )
+            
             return result.model_dump(mode='json')
             
         except Exception as e:

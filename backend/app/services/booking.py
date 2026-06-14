@@ -7,7 +7,7 @@ from app.db.models import Slot, SlotStatus, IdempotencyKey
 from app.schemas.booking import BookingRequest, BookingResponse
 from app.services.waitlist import add_to_waitlist, get_waitlist_length
 
-async def attempt_booking(db: AsyncSession, request: BookingRequest) -> BookingResponse:
+async def attempt_booking(db: AsyncSession, request: BookingRequest, current_user: str) -> BookingResponse:
     # 1. Idempotency Check
     stmt = select(IdempotencyKey).where(IdempotencyKey.key == request.idempotency_key)
     result = await db.execute(stmt)
@@ -42,8 +42,9 @@ async def attempt_booking(db: AsyncSession, request: BookingRequest) -> BookingR
         if slot.status != SlotStatus.AVAILABLE:
             is_waitlisted = True
         else:
-            # 4. Mutate State (Immediate Success)
+            # 4. Mutate State & ASSIGN OWNERSHIP
             slot.status = SlotStatus.BOOKED
+            slot.owner_id = current_user # SECURITY: Lock the row to this user
             slot.version += 1 
             
             response_data = BookingResponse(
@@ -54,8 +55,6 @@ async def attempt_booking(db: AsyncSession, request: BookingRequest) -> BookingR
             )
 
     except OperationalError:
-        # THE INTERCEPT: PostgreSQL throws OperationalError when nowait=True lock fails.
-        # This means someone else is currently booking it! We catch it and route to waitlist.
         await db.rollback()
         is_waitlisted = True
     except Exception as e:
@@ -64,10 +63,14 @@ async def attempt_booking(db: AsyncSession, request: BookingRequest) -> BookingR
 
     # 5. Handle Waitlist Routing
     if is_waitlisted:
-        # Re-attach to session if we rolled back
         new_key = await db.merge(new_key)
         
-        await add_to_waitlist(request.slot_id, request.model_dump(mode='json'))
+        # SECURITY: Inject the user's identity into the waitlist payload so 
+        # the background worker knows who to assign the slot to later.
+        queue_payload = request.model_dump(mode='json')
+        queue_payload['user_id'] = current_user 
+        
+        await add_to_waitlist(request.slot_id, queue_payload)
         position = await get_waitlist_length(request.slot_id)
         
         response_data = BookingResponse(
@@ -84,9 +87,9 @@ async def attempt_booking(db: AsyncSession, request: BookingRequest) -> BookingR
     
     await db.commit()
     return response_data
-async def cancel_booking(db: AsyncSession, slot_id: str):
-    """Safely cancels a booking and frees the slot."""
-    # Lock the row so we don't cancel it while someone else is modifying it
+
+async def cancel_booking(db: AsyncSession, slot_id: str, current_user: str):
+    """Safely cancels a booking with strict ownership verification."""
     stmt = select(Slot).where(Slot.id == slot_id).with_for_update()
     result = await db.execute(stmt)
     slot = result.scalars().first()
@@ -97,8 +100,13 @@ async def cancel_booking(db: AsyncSession, slot_id: str):
     if slot.status != SlotStatus.BOOKED:
         raise HTTPException(status_code=400, detail="Slot is not currently booked.")
 
+    # SECURITY: Prevent unauthorized cancellations (IDOR Defense)
+    if slot.owner_id != current_user:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this booking.")
+
     # Free the slot
     slot.status = SlotStatus.AVAILABLE
+    slot.owner_id = None # Clear ownership
     slot.version += 1 
     await db.commit()
     return True

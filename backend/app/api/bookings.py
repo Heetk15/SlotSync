@@ -9,11 +9,18 @@ from arq import create_pool
 from app.worker.tasks import WorkerSettings
 import json
 
+# --- THE PERIMETER DEFENSE & SECURITY ---
+from app.core.rate_limit import check_rate_limit
+from app.core.security import verify_token
+
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
-@router.post("/", response_model=BookingResponse)
-async def book_slot(request: BookingRequest, db: AsyncSession = Depends(get_db)):
-    result = await attempt_booking(db, request)
+# The rate limiter dependency intercepts the request before it ever reaches the database
+# The verify_token dependency extracts the user identity from the JWT
+@router.post("/", response_model=BookingResponse, dependencies=[Depends(check_rate_limit)])
+async def book_slot(request: BookingRequest, db: AsyncSession = Depends(get_db), current_user: str = Depends(verify_token)):
+    # Fire the booking engine with the verified identity
+    result = await attempt_booking(db, request, current_user)
     
     # Broadcast the immediate result (Success or Waitlisted)
     await broadcast_slot_state(
@@ -24,8 +31,9 @@ async def book_slot(request: BookingRequest, db: AsyncSession = Depends(get_db))
     return result
 
 @router.delete("/{slot_id}")
-async def cancel_slot(slot_id: str, db: AsyncSession = Depends(get_db)):
-    await cancel_booking(db, slot_id)
+async def cancel_slot(slot_id: str, db: AsyncSession = Depends(get_db), current_user: str = Depends(verify_token)):
+    # Safely route the cancellation, enforcing IDOR defense (User must own the lock)
+    await cancel_booking(db, slot_id, current_user)
     
     # Broadcast that the slot is temporarily free
     await broadcast_slot_state(slot_id, "AVAILABLE", "Slot has been freed.")
@@ -43,18 +51,13 @@ async def slot_websocket(websocket: WebSocket, slot_id: str):
     pubsub = redis.pubsub()
     channel = f"channel:slot:{slot_id}"
     
-    # Subscribe this specific user to this specific slot's channel
     await pubsub.subscribe(channel)
     
     try:
-        # Listen indefinitely for messages from the Redis channel
         async for message in pubsub.listen():
             if message["type"] == "message":
                 data = message["data"]
-                # FIX: Only decode if it arrives as raw bytes. If it's already a string, leave it alone.
                 text_data = data.decode("utf-8") if isinstance(data, bytes) else data
-                # Push the data straight to the user's browser
                 await websocket.send_text(text_data)
     except WebSocketDisconnect:
-        # Clean up the connection if the user closes their browser tab
         await pubsub.unsubscribe(channel)

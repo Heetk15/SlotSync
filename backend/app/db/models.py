@@ -15,6 +15,8 @@ class SlotStatus(str, enum.Enum):
 class Slot(Base):
     __tablename__ = 'slots'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # NEW: The string identifier of the user who holds the booking
+    owner_id = Column(String(255), nullable=True) 
     start_time = Column(DateTime(timezone=True), nullable=False)
     end_time = Column(DateTime(timezone=True), nullable=False)
     status = Column(SQLEnum(SlotStatus), nullable=False, default=SlotStatus.AVAILABLE)

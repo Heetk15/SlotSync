@@ -42,8 +42,15 @@ async def promote_user_from_waitlist(ctx, slot_id: str):
     # 2. Open a fresh, isolated database session for the background task
     async with AsyncSessionLocal() as db:
         try:
-            result = await attempt_booking(db, request)
-            logger.info(f"Promotion Successful! Slot booked.")
+            # Extract the inherited identity from the waitlist payload
+            inherited_user_id = next_user_payload.pop("user_id", "unknown_worker_user")
+            
+            # Reconstruct the request without the user_id (as our Pydantic schema doesn't expect it)
+            request = BookingRequest(**next_user_payload)
+            
+            # Fire the booking engine with the inherited identity
+            result = await attempt_booking(db, request, inherited_user_id)
+            logger.info(f"Promotion Successful! Slot booked to {inherited_user_id}.")
             
             # --- NEW: Broadcast the Waitlist Promotion ---
             await broadcast_slot_state(

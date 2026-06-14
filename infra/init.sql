@@ -7,6 +7,7 @@ CREATE TYPE slot_status AS ENUM ('AVAILABLE', 'HELD', 'BOOKED');
 -- Table: Slots
 CREATE TABLE slots (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id VARCHAR(255), -- NEW: Tracks who currently owns the lock
     start_time TIMESTAMP WITH TIME ZONE NOT NULL,
     end_time TIMESTAMP WITH TIME ZONE NOT NULL,
     status slot_status NOT NULL DEFAULT 'AVAILABLE',

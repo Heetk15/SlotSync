@@ -1,15 +1,18 @@
 import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
 
-load_dotenv()
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "SlotSync"
+    # Fallback to local dev URLs if env vars are missing
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+psycopg://admin:securepassword@localhost:5433/slotsync")
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
 
-# Grab the raw URL from the environment (Render/Neon)
-raw_db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/slotsync")
+    class Config:
+        case_sensitive = True
 
-# Fix the URL scheme for SQLAlchemy Async Engine
-if raw_db_url and raw_db_url.startswith("postgresql://"):
-    DATABASE_URL = raw_db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-else:
-    DATABASE_URL = raw_db_url
+settings = Settings()
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+# Cloud Provider Fix: Neon injects "postgresql://", which defaults to the old psycopg2 driver.
+# We must intercept it and force it to use the modern async psycopg3 driver we installed.
+if settings.DATABASE_URL.startswith("postgresql://"):
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)

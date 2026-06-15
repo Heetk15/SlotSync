@@ -2,8 +2,11 @@ import subprocess
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 from app.api.bookings import router as bookings_router
 from app.core.redis import init_redis, close_redis
+from app.core.security import create_access_token # Import the token generator
 
 # Configure logging to see worker output in Render logs
 logging.basicConfig(level=logging.INFO)
@@ -26,13 +29,23 @@ app.add_middleware(
 # 2. Include Routers
 app.include_router(bookings_router, prefix="/bookings")
 
+# --- NEW: AUTHENTICATION ENDPOINT ---
+class TokenRequest(BaseModel):
+    user_id: str
+
+@app.post("/auth/token")
+async def login_for_access_token(request: TokenRequest):
+    """Generates a secure JWT for the requesting user."""
+    access_token = create_access_token(user_id=request.user_id)
+    return {"access_token": access_token, "token_type": "bearer"}
+# ------------------------------------
+
 @app.on_event("startup")
 async def startup_event():
     # Initialize Redis connection
     await init_redis()
     
     # Launch ARQ worker as a subprocess (The "Free-Tier DevOps Hack")
-    # This runs the worker in parallel within the same Render container
     try:
         subprocess.Popen(["arq", "app.worker.tasks.WorkerSettings"])
         logger.info("ARQ Worker process started successfully.")

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export function useSlotSocket(slotId, apiUrl = 'http://127.0.0.1:8000', wsUrl = 'ws://127.0.0.1:8000') {
-  const [slotState, setSlotState] = useState({ status: 'AWAITING CONNECTION...', message: 'Initializing connection...' });
+export function useSlotSocket(slotId, apiUrl = process.env.NEXT_PUBLIC_API_URL, wsUrl = process.env.NEXT_PUBLIC_WS_URL) {  const [slotState, setSlotState] = useState({ status: 'AWAITING CONNECTION...', message: 'Initializing connection...' });
   const [wsStatus, setWsStatus] = useState('DISCONNECTED');
   const [waitlistCount, setWaitlistCount] = useState(0);
   

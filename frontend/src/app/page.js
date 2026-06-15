@@ -20,7 +20,7 @@ export default function SlotSyncDashboard() {
     
     try {
       // 1. Fetch the stateless JWT
-      const authRes = await fetch('http://127.0.0.1:8000/auth/token', {
+      const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })
@@ -30,7 +30,7 @@ export default function SlotSyncDashboard() {
       const { access_token } = await authRes.json();
 
       // 2. Dispatch the booking request with the Bearer token
-      const response = await fetch('http://127.0.0.1:8000/bookings/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ export default function SlotSyncDashboard() {
     
     try {
       // 1. Fetch the stateless JWT
-      const authRes = await fetch('http://127.0.0.1:8000/auth/token', {
+      const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })
@@ -79,7 +79,7 @@ export default function SlotSyncDashboard() {
       const { access_token } = await authRes.json();
 
       // 2. Dispatch the cancellation request enforcing IDOR defense
-      const response = await fetch(`http://127.0.0.1:8000/bookings/${slotId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/${slotId}`, {
         method: 'DELETE',
         headers: { 
           'Authorization': `Bearer ${access_token}` 
@@ -181,14 +181,3 @@ export default function SlotSyncDashboard() {
           {actionStatus.message && (
             <div className={`text-xs font-mono p-3 rounded border ${
               actionStatus.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' :
-              actionStatus.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
-              'bg-slate-50 border-slate-200 text-slate-600'
-            }`}>
-              {actionStatus.message}
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
-  );
-}

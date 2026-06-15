@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text # Added for raw SQL querying
+from sqlalchemy import text 
 from app.db.session import get_db
 from app.schemas.booking import BookingRequest, BookingResponse
 from app.services.booking import attempt_booking, cancel_booking
@@ -15,14 +15,12 @@ from app.core.security import verify_token
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
-# --- NEW: THE READ ENDPOINT TO LIST SLOTS ---
+# --- THE NEW GET ENDPOINT ---
 @router.get("/slots")
 async def get_all_slots(db: AsyncSession = Depends(get_db)):
-    """Fetch all available and booked slots directly from the database."""
-    # Using raw SQL text to ensure it matches your DB schema perfectly
+    # Uses raw SQL to bypass SQLAlchemy model mismatches during testing
     result = await db.execute(text("SELECT id, start_time, end_time, status FROM slots"))
     
-    # Format the rows into a list of dictionaries
     slots = []
     for row in result.all():
         slots.append({
@@ -33,14 +31,13 @@ async def get_all_slots(db: AsyncSession = Depends(get_db)):
         })
     return slots
 
-# --- EXISTING BOOKING ENDPOINT ---
+# --- EXISTING ROUTES ---
 @router.post("/", response_model=BookingResponse, dependencies=[Depends(check_rate_limit)])
 async def book_slot(request: BookingRequest, db: AsyncSession = Depends(get_db), current_user: str = Depends(verify_token)):
     result = await attempt_booking(db, request, current_user)
     await broadcast_slot_state(str(request.slot_id), result.status, result.message)
     return result
 
-# --- EXISTING CANCEL ENDPOINT ---
 @router.delete("/{slot_id}")
 async def cancel_slot(slot_id: str, db: AsyncSession = Depends(get_db), current_user: str = Depends(verify_token)):
     await cancel_booking(db, slot_id, current_user)
@@ -50,7 +47,6 @@ async def cancel_slot(slot_id: str, db: AsyncSession = Depends(get_db), current_
     await arq_redis.enqueue_job('promote_user_from_waitlist', slot_id)
     return {"status": "CANCELED", "message": "Worker triggered for waitlist promotion."}
 
-# --- EXISTING WEBSOCKET ENDPOINT ---
 @router.websocket("/ws/{slot_id}")
 async def slot_websocket(websocket: WebSocket, slot_id: str):
     await websocket.accept()

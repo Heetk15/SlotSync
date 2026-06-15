@@ -13,8 +13,7 @@ import json
 from app.core.rate_limit import check_rate_limit
 from app.core.security import verify_token
 
-router = APIRouter(prefix="/bookings", tags=["Bookings"])
-
+router = APIRouter(tags=["Bookings"])
 # --- THE NEW GET ENDPOINT ---
 @router.get("/slots")
 async def get_all_slots(db: AsyncSession = Depends(get_db)):

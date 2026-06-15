@@ -181,3 +181,14 @@ export default function SlotSyncDashboard() {
           {actionStatus.message && (
             <div className={`text-xs font-mono p-3 rounded border ${
               actionStatus.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' :
+              actionStatus.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+              'bg-slate-50 border-slate-200 text-slate-600'
+            }`}>
+              {actionStatus.message}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}

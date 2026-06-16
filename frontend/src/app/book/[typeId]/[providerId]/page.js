@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSlotSocket } from '../../../../hooks/useSlotSocket';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const SIMULATED_USER_ID = 'consumer_001';
@@ -53,7 +54,10 @@ export default function ProviderSchedulePage({ params }) {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bookingSlotId, setBookingSlotId] = useState('');
+  const [selectedSlotId, setSelectedSlotId] = useState('');
   const [toast, setToast] = useState({ type: '', message: '' });
+
+  const { slotState, wsStatus, waitlistCount } = useSlotSocket(selectedSlotId);
 
   const groupedSlots = useMemo(() => groupSlotsByDate(slots), [slots]);
   const orderedDates = useMemo(() => Object.keys(groupedSlots).sort((a, b) => a.localeCompare(b)), [groupedSlots]);
@@ -140,6 +144,7 @@ export default function ProviderSchedulePage({ params }) {
     }
 
     setBookingSlotId(slot.id);
+    setSelectedSlotId(slot.id);
     showToast('', '');
 
     setSlots((currentSlots) => currentSlots.map((currentSlot) => (
@@ -202,7 +207,29 @@ export default function ProviderSchedulePage({ params }) {
             <h2 className="text-xl font-semibold text-slate-950">{params.providerId}</h2>
             <p className="text-sm text-slate-600">Signed in as a simulated consumer identity.</p>
           </div>
-          <div className="flex items-center justify-end">
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={[
+                'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]',
+                wsStatus === 'CONNECTED'
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : wsStatus === 'ERROR'
+                    ? 'bg-rose-50 text-rose-700'
+                    : 'bg-slate-100 text-slate-500',
+              ].join(' ')}>
+                Live: {wsStatus}
+              </span>
+              {selectedSlotId ? (
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                  Watching {selectedSlotId.slice(0, 8)}
+                </span>
+              ) : null}
+              {waitlistCount ? (
+                <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+                  Waitlist {waitlistCount}
+                </span>
+              ) : null}
+            </div>
             <button
               type="button"
               onClick={handleRefresh}
@@ -252,25 +279,44 @@ export default function ProviderSchedulePage({ params }) {
                     .map((slot) => {
                       const isAvailable = slot.status === 'AVAILABLE';
                       const isHeldOrBooked = slot.status === 'BOOKED' || slot.status === 'HELD';
+                      const isWatchedSlot = selectedSlotId === slot.id;
                       const isBooking = bookingSlotId === slot.id;
 
                       return (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          disabled={!isAvailable || isBooking}
-                          onClick={() => handleBookSlot(slot)}
-                          className={[
-                            'rounded-xl px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20',
-                            isAvailable && !isBooking
-                              ? 'border border-slate-300 bg-white text-slate-800 hover:border-[#0f62fe] hover:text-[#0f62fe]'
-                              : 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400',
-                            isBooking ? 'opacity-70' : '',
-                          ].join(' ')}
-                        >
-                          {isBooking ? 'Booking...' : formatTimeLabel(slot.start_time)}
-                          {isHeldOrBooked ? <span className="sr-only">unavailable</span> : null}
-                        </button>
+                        <div key={slot.id} className="space-y-2">
+                          <button
+                            type="button"
+                            disabled={!isAvailable || isBooking}
+                            onClick={() => handleBookSlot(slot)}
+                            className={[
+                              'w-full rounded-xl px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20',
+                              isAvailable && !isBooking
+                                ? 'border border-slate-300 bg-white text-slate-800 hover:border-[#0f62fe] hover:text-[#0f62fe]'
+                                : 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400',
+                              isBooking ? 'opacity-70' : '',
+                              isWatchedSlot ? 'ring-2 ring-[#0f62fe]/15' : '',
+                            ].join(' ')}
+                          >
+                            {isBooking ? 'Booking...' : formatTimeLabel(slot.start_time)}
+                            {isHeldOrBooked ? <span className="sr-only">unavailable</span> : null}
+                          </button>
+                          {isWatchedSlot ? (
+                            <div className={[
+                              'rounded-xl border px-3 py-2 text-xs font-medium',
+                              slotState.status === 'BOOKED'
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                : slotState.status === 'HELD'
+                                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                  : 'border-slate-200 bg-slate-50 text-slate-600',
+                            ].join(' ')}>
+                              <div className="flex items-center justify-between gap-3">
+                                <span>{slotState.status || slot.status}</span>
+                                <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Real-time</span>
+                              </div>
+                              {slotState.message ? <p className="mt-1 text-slate-600">{slotState.message}</p> : null}
+                            </div>
+                          ) : null}
+                        </div>
                       );
                     })}
                 </div>
@@ -294,6 +340,20 @@ export default function ProviderSchedulePage({ params }) {
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm font-medium">{toast.message}</p>
             <button type="button" onClick={() => setToast({ type: '', message: '' })} className="text-sm font-semibold">
+              Close
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedSlotId && slotState?.message ? (
+        <div className="fixed right-6 top-6 z-50 w-[calc(100%-3rem)] max-w-sm rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Live update</p>
+              <p className="mt-1 text-sm font-medium text-slate-900">{slotState.message}</p>
+            </div>
+            <button type="button" onClick={() => setSelectedSlotId('')} className="text-sm font-semibold text-slate-500">
               Close
             </button>
           </div>

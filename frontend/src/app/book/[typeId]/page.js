@@ -63,7 +63,7 @@ export default async function AppointmentTypeProvidersPage({ params }) {
               <Link
                 key={provider.id}
                 href={`/book/${params.typeId}/${provider.id}`}
-                className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20"
               >
                 <div className="flex h-full flex-col justify-between gap-6">
                   <div className="space-y-3">

@@ -171,13 +171,13 @@ export default function AdminPage() {
                 type="text"
                 value={authUserId}
                 onChange={(event) => setAuthUserId(event.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
               />
             </label>
             <button
               type="button"
               onClick={authenticate}
-              className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={busy === 'auth'}
             >
               {busy === 'auth' ? 'Authenticating...' : authToken ? 'Refresh token' : 'Authenticate'}
@@ -198,7 +198,7 @@ export default function AdminPage() {
                   type="text"
                   value={appointmentTypeForm.name}
                   onChange={(event) => setAppointmentTypeForm((current) => ({ ...current, name: event.target.value }))}
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                   required
                 />
               </label>
@@ -208,7 +208,7 @@ export default function AdminPage() {
                   value={appointmentTypeForm.description}
                   onChange={(event) => setAppointmentTypeForm((current) => ({ ...current, description: event.target.value }))}
                   rows="4"
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                   required
                 />
               </label>
@@ -220,7 +220,7 @@ export default function AdminPage() {
                     min="1"
                     value={appointmentTypeForm.duration_minutes}
                     onChange={(event) => setAppointmentTypeForm((current) => ({ ...current, duration_minutes: Number(event.target.value) }))}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                     required
                   />
                 </label>
@@ -256,7 +256,7 @@ export default function AdminPage() {
                   type="text"
                   value={providerForm.user_id}
                   onChange={(event) => setProviderForm((current) => ({ ...current, user_id: event.target.value }))}
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                   required
                 />
               </label>
@@ -266,7 +266,7 @@ export default function AdminPage() {
                   type="text"
                   value={providerForm.name}
                   onChange={(event) => setProviderForm((current) => ({ ...current, name: event.target.value }))}
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                   required
                 />
               </label>
@@ -276,7 +276,7 @@ export default function AdminPage() {
                   value={providerForm.description}
                   onChange={(event) => setProviderForm((current) => ({ ...current, description: event.target.value }))}
                   rows="4"
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                   required
                 />
               </label>
@@ -328,7 +328,7 @@ export default function AdminPage() {
               <button
                 type="submit"
                 disabled={!canMutate || busy === 'link'}
-                className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-900 ring-1 ring-inset ring-slate-300 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-slate-900 ring-1 ring-inset ring-slate-300 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busy === 'link' ? 'Linking...' : 'Create association'}
               </button>

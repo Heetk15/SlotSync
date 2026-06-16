@@ -170,13 +170,13 @@ export default function ProviderPage() {
                 type="text"
                 value={authUserId}
                 onChange={(event) => setAuthUserId(event.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
               />
             </label>
             <button
               type="button"
               onClick={authenticate}
-              className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={busy === 'auth'}
             >
               {busy === 'auth' ? 'Authenticating...' : authToken ? 'Refresh token' : 'Authenticate'}
@@ -197,7 +197,7 @@ export default function ProviderPage() {
                   type="text"
                   value={providerId}
                   onChange={(event) => setProviderId(event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                   required
                 />
               </label>
@@ -208,7 +208,7 @@ export default function ProviderPage() {
                     type="date"
                     value={form.date}
                     onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                     required
                   />
                 </label>
@@ -219,7 +219,7 @@ export default function ProviderPage() {
                     min="1"
                     value={form.duration_minutes}
                     onChange={(event) => setForm((current) => ({ ...current, duration_minutes: Number(event.target.value) }))}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                     required
                   />
                 </label>
@@ -231,7 +231,7 @@ export default function ProviderPage() {
                     type="time"
                     value={form.start_time}
                     onChange={(event) => setForm((current) => ({ ...current, start_time: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
                     required
                   />
                 </label>
@@ -249,7 +249,7 @@ export default function ProviderPage() {
               <button
                 type="submit"
                 disabled={!canQuery || busy === 'generate'}
-                className="w-full rounded-xl bg-[#0f62fe] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0b57e3] disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-xl bg-[#0f62fe] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0b57e3] focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busy === 'generate' ? 'Generating...' : 'Generate slots'}
               </button>
@@ -266,7 +266,7 @@ export default function ProviderPage() {
                 type="button"
                 onClick={loadSlots}
                 disabled={!canQuery || busy === 'load'}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busy === 'load' ? 'Loading...' : 'Refresh'}
               </button>

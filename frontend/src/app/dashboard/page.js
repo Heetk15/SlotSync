@@ -181,11 +181,18 @@ export default function DashboardPage() {
     </div>
   );
 
+  const emptyStateMessage = {
+    upcoming: 'No upcoming appointments found.',
+    waitlisted: 'No waitlisted appointments found.',
+    completed: 'No completed appointments yet.',
+    cancelled: 'No cancelled appointments yet.',
+  };
+
   const renderSlots = (sectionKey) => {
     const sectionSlots = groupedSlots[sectionKey];
 
     if (sectionSlots.length === 0) {
-      return renderEmptyState('Nothing here yet.');
+      return renderEmptyState(emptyStateMessage[sectionKey]);
     }
 
     return (
@@ -214,11 +221,11 @@ export default function DashboardPage() {
                 </div>
 
                 {canCancel ? (
-                  <button
+                    <button
                     type="button"
                     disabled={isBusy}
                     onClick={() => handleCancel(slot)}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isBusy ? 'Cancelling...' : 'Cancel Appointment'}
                   </button>
@@ -258,7 +265,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={loadDashboard}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
             >
               Refresh
@@ -274,7 +281,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={[
-                  'rounded-2xl border px-4 py-3 text-left transition',
+                  'rounded-2xl border px-4 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20',
                   activeTab === tab.key
                     ? 'border-[#0f62fe] bg-[#f5f8ff] shadow-sm'
                     : 'border-slate-200 bg-white hover:bg-slate-50',

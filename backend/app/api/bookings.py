@@ -132,7 +132,7 @@ async def book_slot(request: BookingRequest, db: AsyncSession = Depends(get_db),
 @router.delete("/{slot_id}")
 async def cancel_slot(slot_id: str, db: AsyncSession = Depends(get_db), current_user: str = Depends(verify_token)):
     await cancel_booking(db, slot_id, current_user)
-    await broadcast_slot_state(slot_id, "AVAILABLE", "Slot has been freed.")
+    await broadcast_slot_state(slot_id, "HELD", "Processing slot availability...")
     
     arq_redis = await create_pool(WorkerSettings.redis_settings)
     await arq_redis.enqueue_job('promote_user_from_waitlist', slot_id)

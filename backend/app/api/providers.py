@@ -28,6 +28,9 @@ async def generate_slots(
     window_end = datetime.combine(slot_date, payload.end_time).replace(tzinfo=timezone.utc)
     duration = timedelta(minutes=payload.duration_minutes)
 
+    if payload.duration_minutes <= 0:
+        raise HTTPException(status_code=400, detail="duration_minutes must be greater than zero.")
+
     slot_rows = []
     while current_start + duration <= window_end:
         slot_rows.append(

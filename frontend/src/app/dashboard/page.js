@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const SIMULATED_USER_ID = 'user_001';
+const SIMULATED_USER_ID = 'consumer_001';
 
 async function fetchAccessToken(userId) {
   const response = await fetch(`${API_URL}/auth/token`, {

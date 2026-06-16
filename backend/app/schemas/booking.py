@@ -16,3 +16,46 @@ class BookingResponse(BaseModel):
 class SlotCreate(BaseModel):
     start_time: datetime
     end_time: datetime
+
+
+class SlotResponse(BaseModel):
+    id: UUID4
+    owner_id: str | None = None
+    start_time: datetime
+    end_time: datetime
+    status: str
+    version: int
+    provider_id: UUID4 | None = None
+    appointment_type_id: UUID4 | None = None
+
+
+class AppointmentTypeCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str = Field(..., min_length=1)
+    duration_minutes: int = Field(..., gt=0)
+    active: bool = True
+
+
+class AppointmentTypeResponse(BaseModel):
+    id: UUID4
+    name: str
+    description: str
+    duration_minutes: int
+    active: bool
+    created_at: datetime
+
+
+class ProviderCreate(BaseModel):
+    user_id: str = Field(..., min_length=1, max_length=255)
+    name: str = Field(..., min_length=1, max_length=255)
+    description: str = Field(..., min_length=1)
+    active: bool = True
+
+
+class ProviderResponse(BaseModel):
+    id: UUID4
+    user_id: str
+    name: str
+    description: str
+    active: bool
+    created_at: datetime

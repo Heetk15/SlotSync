@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text 
+from sqlalchemy import text
 from app.db.session import get_db
 from app.schemas.booking import BookingRequest, BookingResponse
 from app.services.booking import attempt_booking, cancel_booking
@@ -16,9 +16,21 @@ from app.core.security import verify_token
 router = APIRouter(tags=["Bookings"])
 # --- THE NEW GET ENDPOINT ---
 @router.get("/slots")
-async def get_all_slots(db: AsyncSession = Depends(get_db)):
+async def get_all_slots(
+    db: AsyncSession = Depends(get_db),
+    _current_user: str = Depends(verify_token),
+    provider_id: str | None = Query(default=None),
+):
     # Uses raw SQL to bypass SQLAlchemy model mismatches during testing
-    result = await db.execute(text("SELECT id, start_time, end_time, status FROM slots"))
+    statement = text("SELECT id, start_time, end_time, status, provider_id, appointment_type_id FROM slots")
+    if provider_id:
+        statement = text(
+            "SELECT id, start_time, end_time, status, provider_id, appointment_type_id "
+            "FROM slots WHERE provider_id = :provider_id"
+        )
+        result = await db.execute(statement, {"provider_id": provider_id})
+    else:
+        result = await db.execute(statement)
     
     slots = []
     for row in result.all():
@@ -26,7 +38,9 @@ async def get_all_slots(db: AsyncSession = Depends(get_db)):
             "id": str(row.id),
             "start_time": row.start_time.isoformat() if row.start_time else None,
             "end_time": row.end_time.isoformat() if row.end_time else None,
-            "status": row.status
+            "status": row.status,
+            "provider_id": str(row.provider_id) if getattr(row, "provider_id", None) else None,
+            "appointment_type_id": str(row.appointment_type_id) if getattr(row, "appointment_type_id", None) else None,
         })
     return slots
 

@@ -5,7 +5,7 @@ import { useSlotSocket } from '../hooks/useSlotSocket';
 
 export default function SlotSyncDashboard() {
   const [slotId, setSlotId] = useState('');
-  const [userId, setUserId] = useState('user_' + Math.floor(Math.random() * 1000));
+  const [userId, setUserId] = useState('user_001');
   const [actionStatus, setActionStatus] = useState({ type: 'idle', message: '' });
   
   const { slotState, wsStatus, waitlistCount } = useSlotSocket(slotId);

@@ -1,23 +1,22 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export function useSlotSocket(slotId, apiUrl = process.env.NEXT_PUBLIC_API_URL, wsUrl = process.env.NEXT_PUBLIC_WS_URL) {  const [slotState, setSlotState] = useState({ status: 'AWAITING CONNECTION...', message: 'Initializing connection...' });
   const [wsStatus, setWsStatus] = useState('DISCONNECTED');
   const [waitlistCount, setWaitlistCount] = useState(0);
   
   const ws = useRef(null);
-  const reconnectTimeout = useRef(null);
 
-  const connect = useCallback(() => {
+  useEffect(() => {
     if (!slotId) return;
 
-    setWsStatus('CONNECTING');
-    ws.current = new WebSocket(`${wsUrl}/bookings/ws/${slotId}`);
+    const socket = new WebSocket(`${wsUrl}/bookings/ws/${slotId}`);
+    ws.current = socket;
 
-    ws.current.onopen = () => {
+    socket.onopen = () => {
       setWsStatus('CONNECTED');
     };
 
-    ws.current.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         // Map backend event updates directly to React state
@@ -35,27 +34,18 @@ export function useSlotSocket(slotId, apiUrl = process.env.NEXT_PUBLIC_API_URL, 
       }
     };
 
-    ws.current.onclose = () => {
+    socket.onclose = () => {
       setWsStatus('DISCONNECTED');
-      // Fault tolerance: Auto-reconnect after 3 seconds if the connection drops
-      reconnectTimeout.current = setTimeout(() => {
-        console.log("Attempting socket reconnection...");
-        connect();
-      }, 3000);
     };
 
-    ws.current.onerror = () => {
+    socket.onerror = () => {
       setWsStatus('ERROR');
     };
-  }, [slotId, wsUrl]);
 
-  useEffect(() => {
-    connect();
     return () => {
-      if (ws.current) ws.current.close();
-      if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current);
+      socket.close();
     };
-  }, [connect]);
+  }, [slotId, wsUrl]);
 
   return { slotState, wsStatus, waitlistCount };
 }

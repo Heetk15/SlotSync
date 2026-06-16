@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from app.api.bookings import router as bookings_router
+from app.api.admin import router as admin_router
+from app.api.providers import router as providers_router
 from app.core.redis import init_redis, close_redis
 from app.core.security import create_access_token # Import the token generator
 
@@ -28,6 +30,8 @@ app.add_middleware(
 
 # 2. Include Routers
 app.include_router(bookings_router, prefix="/bookings")
+app.include_router(admin_router, prefix="/admin")
+app.include_router(providers_router, prefix="/providers")
 
 # --- NEW: AUTHENTICATION ENDPOINT ---
 class TokenRequest(BaseModel):

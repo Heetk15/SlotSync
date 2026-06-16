@@ -1,5 +1,5 @@
-from pydantic import BaseModel, UUID4, Field
-from datetime import datetime
+from pydantic import BaseModel, UUID4, Field, ConfigDict
+from datetime import datetime, date, time
 
 class BookingRequest(BaseModel):
     # The slot the user is trying to book
@@ -8,6 +8,8 @@ class BookingRequest(BaseModel):
     idempotency_key: str = Field(..., min_length=10, max_length=255)
     
 class BookingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     slot_id: UUID4
     status: str
     message: str
@@ -19,6 +21,8 @@ class SlotCreate(BaseModel):
 
 
 class SlotResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID4
     owner_id: str | None = None
     start_time: datetime
@@ -37,6 +41,8 @@ class AppointmentTypeCreate(BaseModel):
 
 
 class AppointmentTypeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID4
     name: str
     description: str
@@ -53,9 +59,23 @@ class ProviderCreate(BaseModel):
 
 
 class ProviderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID4
     user_id: str
     name: str
     description: str
     active: bool
     created_at: datetime
+
+
+class AssignAppointmentTypeRequest(BaseModel):
+    appointment_type_id: UUID4
+
+
+class SlotGenerateRequest(BaseModel):
+    date: date
+    start_time: time
+    end_time: time
+    duration_minutes: int = Field(..., gt=0)
+    provider_id: UUID4

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
+from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 from app.db.session import get_db
+from app.db.models import AppointmentType, Provider
 from app.schemas.booking import BookingRequest, BookingResponse
 from app.services.booking import attempt_booking, cancel_booking
 from app.services.broadcaster import broadcast_slot_state
@@ -14,6 +15,55 @@ from app.core.rate_limit import check_rate_limit
 from app.core.security import verify_token
 
 router = APIRouter(tags=["Bookings"])
+
+
+@router.get("/appointment-types")
+async def get_appointment_types(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(AppointmentType)
+        .where(AppointmentType.active.is_(True))
+        .order_by(AppointmentType.created_at.desc())
+    )
+
+    appointment_types = []
+    for appointment_type in result.scalars().all():
+        appointment_types.append(
+            {
+                "id": str(appointment_type.id),
+                "name": appointment_type.name,
+                "description": appointment_type.description,
+                "duration_minutes": appointment_type.duration_minutes,
+                "active": appointment_type.active,
+            }
+        )
+
+    return appointment_types
+
+
+@router.get("/appointment-types/{type_id}/providers")
+async def get_providers_for_appointment_type(type_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Provider)
+        .join(Provider.appointment_types)
+        .where(AppointmentType.id == type_id)
+        .where(Provider.active.is_(True))
+        .where(AppointmentType.active.is_(True))
+        .order_by(Provider.created_at.desc())
+    )
+
+    providers = []
+    for provider in result.scalars().unique().all():
+        providers.append(
+            {
+                "id": str(provider.id),
+                "user_id": provider.user_id,
+                "name": provider.name,
+                "description": provider.description,
+                "active": provider.active,
+            }
+        )
+
+    return providers
 # --- THE NEW GET ENDPOINT ---
 @router.get("/slots")
 async def get_all_slots(

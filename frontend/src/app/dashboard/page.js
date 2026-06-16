@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const SIMULATED_USER_ID = 'consumer_001';
@@ -92,7 +92,7 @@ export default function DashboardPage() {
     { key: 'cancelled', label: 'Cancelled', count: groupedSlots.cancelled.length },
   ]), [groupedSlots]);
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
       const token = authToken || (await fetchAccessToken(userId));
@@ -107,7 +107,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authToken, userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,6 +141,16 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, [userId]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      void loadDashboard();
+    }, 30000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [loadDashboard]);
 
   const handleCancel = async (slot) => {
     if (!authToken) {

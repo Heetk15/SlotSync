@@ -54,6 +54,7 @@ export default function ProviderSchedulePage({ params }) {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bookingSlotId, setBookingSlotId] = useState('');
+  const [localLoadingSlotId, setLocalLoadingSlotId] = useState('');
   const [selectedSlotId, setSelectedSlotId] = useState('');
   const [toast, setToast] = useState({ type: '', message: '' });
 
@@ -143,6 +144,7 @@ export default function ProviderSchedulePage({ params }) {
       return;
     }
 
+    setLocalLoadingSlotId(slot.id);
     setBookingSlotId(slot.id);
     setSelectedSlotId(slot.id);
     showToast('', '');
@@ -177,6 +179,7 @@ export default function ProviderSchedulePage({ params }) {
       await refreshSlots();
     } finally {
       setBookingSlotId('');
+      setLocalLoadingSlotId('');
     }
   };
 
@@ -281,23 +284,24 @@ export default function ProviderSchedulePage({ params }) {
                       const isHeldOrBooked = slot.status === 'BOOKED' || slot.status === 'HELD';
                       const isWatchedSlot = selectedSlotId === slot.id;
                       const isBooking = bookingSlotId === slot.id;
+                      const isLocallyLoading = localLoadingSlotId === slot.id;
 
                       return (
                         <div key={slot.id} className="space-y-2">
                           <button
                             type="button"
-                            disabled={!isAvailable || isBooking}
+                            disabled={!isAvailable || isBooking || isLocallyLoading}
                             onClick={() => handleBookSlot(slot)}
                             className={[
                               'w-full rounded-xl px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20',
                               isAvailable && !isBooking
                                 ? 'border border-slate-300 bg-white text-slate-800 hover:border-[#0f62fe] hover:text-[#0f62fe]'
                                 : 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400',
-                              isBooking ? 'opacity-70' : '',
+                              isBooking || isLocallyLoading ? 'opacity-70' : '',
                               isWatchedSlot ? 'ring-2 ring-[#0f62fe]/15' : '',
                             ].join(' ')}
                           >
-                            {isBooking ? 'Booking...' : formatTimeLabel(slot.start_time)}
+                            {isBooking || isLocallyLoading ? 'Booking...' : formatTimeLabel(slot.start_time)}
                             {isHeldOrBooked ? <span className="sr-only">unavailable</span> : null}
                           </button>
                           {isWatchedSlot ? (

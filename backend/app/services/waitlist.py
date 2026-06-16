@@ -8,7 +8,7 @@ async def add_to_waitlist(slot_id: UUID4, user_payload: dict):
     queue_key = f"waitlist:{str(slot_id)}"
     
     # RPUSH adds to the right (end) of the list, ensuring FIFO order
-    await redis.rpush(queue_key, json.dumps(user_payload))
+    await redis.rpush(queue_key, json.dumps(user_payload, default=str))
     
 async def pop_from_waitlist(slot_id: UUID4) -> dict | None:
     """Pops the oldest user from the waitlist."""

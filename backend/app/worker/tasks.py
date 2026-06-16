@@ -17,10 +17,17 @@ from app.core.redis import get_redis, init_redis, close_redis
 from app.core.config import settings
 import json
 import logging
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Configure logging so we can see the worker's heartbeat in the terminal
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("worker")
+
+
+class WorkerEnvironmentSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+
+    REDIS_URL: str = "redis://localhost:6379"
 
 async def promote_user_from_waitlist(ctx, slot_id: str):
     """
@@ -89,4 +96,4 @@ class WorkerSettings:
     on_startup = startup
     on_shutdown = shutdown
     # Safely convert our string URL into a strict ARQ Redis connection object
-    redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
+    redis_settings = RedisSettings.from_dsn(WorkerEnvironmentSettings().REDIS_URL)

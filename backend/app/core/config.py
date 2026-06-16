@@ -1,14 +1,20 @@
-import os
-from pydantic_settings import BaseSettings
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", env_file_encoding="utf-8")
+
     PROJECT_NAME: str = "SlotSync"
     # Fallback to local dev URLs if env vars are missing
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+psycopg://admin:securepassword@localhost:5433/slotsync")
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+    DATABASE_URL: str = "postgresql+psycopg://admin:securepassword@localhost:5433/slotsync"
+    REDIS_URL: str = "redis://localhost:6379"
 
-    class Config:
-        case_sensitive = True
+    @field_validator("REDIS_URL")
+    @classmethod
+    def validate_redis_url(cls, value: str) -> str:
+        if not value.startswith(("redis://", "rediss://")):
+            raise ValueError("REDIS_URL must start with redis:// or rediss://")
+        return value
 
 settings = Settings()
 

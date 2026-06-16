@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.db.models import AppointmentType, Provider
+from app.db.models import AppointmentType, Provider, Slot
 from app.schemas.booking import BookingRequest, BookingResponse
 from app.services.booking import attempt_booking, cancel_booking
 from app.services.broadcaster import broadcast_slot_state
@@ -15,6 +15,34 @@ from app.core.rate_limit import check_rate_limit
 from app.core.security import verify_token
 
 router = APIRouter(tags=["Bookings"])
+
+
+@router.get("/my-slots")
+async def get_my_slots(
+    db: AsyncSession = Depends(get_db),
+    current_user: str = Depends(verify_token),
+):
+    result = await db.execute(
+        select(Slot)
+        .where(Slot.owner_id == current_user)
+        .order_by(Slot.start_time.asc())
+    )
+
+    slots = []
+    for slot in result.scalars().all():
+        slots.append(
+            {
+                "id": str(slot.id),
+                "owner_id": slot.owner_id,
+                "start_time": slot.start_time.isoformat() if slot.start_time else None,
+                "end_time": slot.end_time.isoformat() if slot.end_time else None,
+                "status": slot.status,
+                "provider_id": str(slot.provider_id) if slot.provider_id else None,
+                "appointment_type_id": str(slot.appointment_type_id) if slot.appointment_type_id else None,
+            }
+        )
+
+    return slots
 
 
 @router.get("/appointment-types")

@@ -43,7 +43,7 @@ export default function Navbar() {
               </button>
             ) : (
               <Link href="/" className="text-sm font-medium text-gray-700 hover:text-gray-900">
-                Sign In
+                Sign In / Sign Up
               </Link>
             )}
           </div>

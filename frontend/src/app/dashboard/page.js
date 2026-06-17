@@ -46,6 +46,11 @@ export default function DashboardPage() {
   const [toast, setToast] = useState({ type: '', message: '' });
   const [cancellingId, setCancellingId] = useState('');
   const [applying, setApplying] = useState(false);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const groupedSlots = useMemo(() => {
     return slots.reduce(
@@ -137,6 +142,33 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    setHasSearched(true);
+    try {
+      const response = await fetch(`${API_URL}/providers/search?name=${encodeURIComponent(searchQuery)}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data);
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        setToast({ type: 'error', message: errData.detail || 'Search failed.' });
+      }
+    } catch (error) {
+      setToast({ type: 'error', message: error.message });
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSelectProvider = (provider) => {
+    window.location.href = `/book/default/${provider.id}`;
+  };
+
   const renderEmptyState = (message) => (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
       {message}
@@ -219,8 +251,8 @@ export default function DashboardPage() {
 
         <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Authenticated User</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950">{user.id}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">User Profile</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-950">Welcome, {user.username}</h2>
             <p className="mt-1 text-sm text-slate-600">Role: {user.role}</p>
           </div>
           <div className="flex items-center justify-end gap-4">
@@ -243,6 +275,56 @@ export default function DashboardPage() {
             </button>
           </div>
         </section>
+
+        {user.role === 'USER' && (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="space-y-1 mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Directory</p>
+              <h2 className="text-lg font-semibold text-slate-950">Find a Provider</h2>
+            </div>
+            <form onSubmit={handleSearch} className="flex gap-3 max-w-md">
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white"
+              />
+              <button
+                type="submit"
+                disabled={searching}
+                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 shadow-sm"
+              >
+                {searching ? 'Searching...' : 'Search'}
+              </button>
+            </form>
+
+            {hasSearched && (
+              <div className="mt-6 space-y-3">
+                {searchResults.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                    No providers found matching "{searchQuery}".
+                  </div>
+                ) : (
+                  searchResults.map(provider => (
+                    <div key={provider.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-indigo-200 transition-colors">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">{provider.name}</h3>
+                        <p className="text-sm text-slate-500 mt-1 line-clamp-1">{provider.description}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleSelectProvider(provider)}
+                        className="ml-4 flex-shrink-0 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
+                      >
+                        View Schedule
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">

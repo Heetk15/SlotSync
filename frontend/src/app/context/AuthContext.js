@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext();
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 const parseJwt = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -17,28 +19,54 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      const decoded = parseJwt(token);
-      if (decoded && decoded.exp * 1000 > Date.now()) {
-        setUser({ id: decoded.sub, role: decoded.role });
-      } else {
-        localStorage.removeItem("token");
+  const fetchMe = async (token) => {
+    try {
+      const response = await fetch(`${API_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        return await response.json();
       }
+    } catch (e) {
+      console.error(e);
     }
-    setLoading(false);
+    return null;
+  };
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const decoded = parseJwt(token);
+        if (decoded && decoded.exp * 1000 > Date.now()) {
+          const userData = await fetchMe(token);
+          if (userData) {
+            setUser(userData);
+          } else {
+            localStorage.removeItem("token");
+          }
+        } else {
+          localStorage.removeItem("token");
+        }
+      }
+      setLoading(false);
+    };
+    initAuth();
   }, []);
 
-  const login = (token) => {
+  const login = async (token) => {
     localStorage.setItem("token", token);
     const decoded = parseJwt(token);
     if (decoded) {
-      setUser({ id: decoded.sub, role: decoded.role });
-      
-      if (decoded.role === 'ADMIN') router.push('/admin');
-      else if (decoded.role === 'PROVIDER') router.push('/provider');
-      else router.push('/dashboard');
+      const userData = await fetchMe(token);
+      if (userData) {
+        setUser(userData);
+        if (userData.role === 'ADMIN') router.push('/admin');
+        else if (userData.role === 'PROVIDER') router.push('/provider');
+        else router.push('/dashboard');
+      } else {
+        localStorage.removeItem("token");
+      }
     }
   };
 

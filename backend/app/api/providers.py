@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,44 @@ from app.schemas.booking import SlotGenerateRequest
 
 router = APIRouter(tags=["Providers"])
 
+
+@router.get("/search")
+async def search_providers(
+    name: str = Query(..., min_length=1),
+    db: AsyncSession = Depends(get_db),
+    _current_user: str = Depends(get_current_user_id),
+):
+    result = await db.execute(
+        select(Provider)
+        .where(Provider.name.ilike(f"%{name}%"))
+        .where(Provider.active == True)
+    )
+    providers = result.scalars().all()
+    
+    return [
+        {
+            "id": str(p.id),
+            "name": p.name,
+            "description": p.description
+        } for p in providers
+    ]
+
+@router.get("/{provider_id}")
+async def get_provider(
+    provider_id: str,
+    db: AsyncSession = Depends(get_db),
+    _current_user: str = Depends(get_current_user_id),
+):
+    result = await db.execute(select(Provider).where(Provider.id == provider_id))
+    provider = result.scalars().first()
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+        
+    return {
+        "id": str(provider.id),
+        "name": provider.name,
+        "description": provider.description
+    }
 
 @router.post("/slots/generate")
 async def generate_slots(

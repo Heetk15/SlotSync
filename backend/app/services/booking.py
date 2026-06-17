@@ -3,9 +3,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from fastapi import HTTPException
 from datetime import datetime, timedelta, timezone
-from app.db.models import Slot, SlotStatus, IdempotencyKey
+from app.db.models import Slot, SlotStatus, IdempotencyKey, User
 from app.schemas.booking import BookingRequest, BookingResponse
 from app.services.waitlist import add_to_waitlist, get_waitlist_length
+from app.services.email_service import send_email
+
+async def get_user_email(db: AsyncSession, user_id: str) -> str:
+    user = await db.execute(select(User).where(User.id == user_id))
+    user_obj = user.scalars().first()
+    return user_obj.username if user_obj else user_id
 
 async def attempt_booking(db: AsyncSession, request: BookingRequest, current_user: str) -> BookingResponse:
     # 1. Idempotency Check
@@ -52,6 +58,14 @@ async def attempt_booking(db: AsyncSession, request: BookingRequest, current_use
                 status="SUCCESS",
                 message="Slot booked successfully.",
                 timestamp=datetime.now(timezone.utc)
+            )
+            
+            # Dispatch Email
+            user_email = await get_user_email(db, current_user)
+            await send_email(
+                to_email=user_email,
+                subject="Booking Confirmation",
+                body=f"Your appointment has been successfully booked for {slot.start_time.strftime('%Y-%m-%d %H:%M')}."
             )
 
     except OperationalError:
@@ -108,5 +122,14 @@ async def cancel_booking(db: AsyncSession, slot_id: str, current_user: str):
     slot.status = SlotStatus.AVAILABLE
     slot.owner_id = None # Clear ownership
     slot.version += 1 
+    
+    # Dispatch Email
+    user_email = await get_user_email(db, current_user)
+    await send_email(
+        to_email=user_email,
+        subject="Booking Cancellation",
+        body=f"Your appointment scheduled for {slot.start_time.strftime('%Y-%m-%d %H:%M')} has been cancelled."
+    )
+    
     await db.commit()
     return True

@@ -9,6 +9,7 @@ from app.api.admin import router as admin_router
 from app.api.providers import router as providers_router
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
+from app.api.waitlist import router as waitlist_router
 from app.core.redis import init_redis, close_redis
 
 # Configure logging to see worker output in Render logs
@@ -36,6 +37,7 @@ app.include_router(users_router, prefix="/users")
 app.include_router(bookings_router, prefix="/bookings")
 app.include_router(admin_router, prefix="/admin")
 app.include_router(providers_router, prefix="/providers")
+app.include_router(waitlist_router, prefix="/waitlist")
 
 @app.on_event("startup")
 async def startup_event():

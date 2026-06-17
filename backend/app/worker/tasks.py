@@ -66,6 +66,21 @@ async def promote_user_from_waitlist(ctx, slot_id: str):
                 f"Waitlist promotion executed for user in queue."
             )
             
+            # --- NEW: Dispatch Waitlist Promotion Email ---
+            from app.db.models import User
+            from sqlalchemy import select
+            from app.services.email_service import send_email
+            
+            user_query = await db.execute(select(User).where(User.id == inherited_user_id))
+            user_obj = user_query.scalars().first()
+            user_email = user_obj.username if user_obj else inherited_user_id
+            
+            await send_email(
+                to_email=user_email,
+                subject="Waitlist Promotion Successful!",
+                body=f"Great news! You have been moved off the waitlist and successfully booked for your requested appointment."
+            )
+            
             return result.model_dump(mode='json')
             
         except Exception as e:

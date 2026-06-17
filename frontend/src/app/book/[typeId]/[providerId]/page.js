@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '../../../../context/AuthContext';
-import { useSlotSocket } from '../../../../hooks/useSlotSocket';
+import { useAuth } from '@/app/context/AuthContext';
+import { useSlotSocket } from '@/hooks/useSlotSocket';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import verify_token
+from app.core.security import get_current_user_id
 from app.db.models import Slot, SlotStatus, Provider
 from app.db.session import get_db
 from app.schemas.booking import SlotGenerateRequest
@@ -16,7 +16,7 @@ router = APIRouter(tags=["Providers"])
 async def generate_slots(
     payload: SlotGenerateRequest,
     db: AsyncSession = Depends(get_db),
-    _current_user: str = Depends(verify_token),
+    _current_user: str = Depends(get_current_user_id),
 ):
     provider_result = await db.execute(select(Provider).where(Provider.id == payload.provider_id))
     provider = provider_result.scalars().first()

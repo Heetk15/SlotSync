@@ -2,25 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-const SIMULATED_USER_ID = 'consumer_001';
-
-async function fetchAccessToken(userId) {
-  const response = await fetch(`${API_URL}/auth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id: userId }),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.detail || 'Authentication failed.');
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 async function fetchMySlots(token) {
   const response = await fetch(`${API_URL}/bookings/my-slots`, {
@@ -49,25 +33,19 @@ function formatDateTime(value) {
 }
 
 function classifySlot(slot) {
-  if (slot.status === 'HELD') {
-    return 'waitlisted';
-  }
-
-  if (slot.status === 'BOOKED') {
-    return 'upcoming';
-  }
-
+  if (slot.status === 'HELD') return 'waitlisted';
+  if (slot.status === 'BOOKED') return 'upcoming';
   return 'completed';
 }
 
 export default function DashboardPage() {
-  const [authToken, setAuthToken] = useState('');
+  const { user } = useAuth();
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('upcoming');
-  const [userId] = useState(SIMULATED_USER_ID);
   const [toast, setToast] = useState({ type: '', message: '' });
   const [cancellingId, setCancellingId] = useState('');
+  const [applying, setApplying] = useState(false);
 
   const groupedSlots = useMemo(() => {
     return slots.reduce(
@@ -76,12 +54,7 @@ export default function DashboardPage() {
         groups[bucket].push(slot);
         return groups;
       },
-      {
-        upcoming: [],
-        waitlisted: [],
-        completed: [],
-        cancelled: [],
-      }
+      { upcoming: [], waitlisted: [], completed: [], cancelled: [] }
     );
   }, [slots]);
 
@@ -93,13 +66,10 @@ export default function DashboardPage() {
   ]), [groupedSlots]);
 
   const loadDashboard = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const token = authToken || (await fetchAccessToken(userId));
-      if (!authToken) {
-        setAuthToken(token);
-      }
-
+      const token = localStorage.getItem("token");
       const data = await fetchMySlots(token);
       setSlots(data);
     } catch (error) {
@@ -107,73 +77,33 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [authToken, userId]);
+  }, [user]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const bootstrap = async () => {
-      try {
-        const token = await fetchAccessToken(userId);
-        if (cancelled) {
-          return;
-        }
-
-        setAuthToken(token);
-        const data = await fetchMySlots(token);
-        if (!cancelled) {
-          setSlots(data);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setToast({ type: 'error', message: error.message });
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    bootstrap();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
-  useEffect(() => {
+    if (!user) return;
+    loadDashboard();
     const intervalId = setInterval(() => {
       void loadDashboard();
     }, 30000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [loadDashboard]);
+    return () => clearInterval(intervalId);
+  }, [loadDashboard, user]);
 
   const handleCancel = async (slot) => {
-    if (!authToken) {
-      return;
-    }
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
     setCancellingId(slot.id);
     setToast({ type: '', message: '' });
-
-    setSlots((currentSlots) => currentSlots.filter((currentSlot) => currentSlot.id !== slot.id));
+    setSlots((currentSlots) => currentSlots.filter((s) => s.id !== slot.id));
 
     try {
       const response = await fetch(`${API_URL}/bookings/${slot.id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.detail || 'Cancellation failed.');
-      }
+      if (!response.ok) throw new Error(data.detail || 'Cancellation failed.');
 
       setToast({ type: 'success', message: 'Appointment cancelled.' });
       await loadDashboard();
@@ -182,6 +112,28 @@ export default function DashboardPage() {
       await loadDashboard();
     } finally {
       setCancellingId('');
+    }
+  };
+
+  const handleApplyProvider = async () => {
+    setApplying(true);
+    try {
+      const response = await fetch(`${API_URL}/users/apply-provider`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json().catch(() => ({}));
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to apply.');
+      }
+      setToast({ type: 'success', message: 'Application submitted successfully! It is under review.' });
+    } catch (error) {
+      setToast({ type: 'error', message: error.message });
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -200,10 +152,7 @@ export default function DashboardPage() {
 
   const renderSlots = (sectionKey) => {
     const sectionSlots = groupedSlots[sectionKey];
-
-    if (sectionSlots.length === 0) {
-      return renderEmptyState(emptyStateMessage[sectionKey]);
-    }
+    if (sectionSlots.length === 0) return renderEmptyState(emptyStateMessage[sectionKey]);
 
     return (
       <div className="space-y-3">
@@ -229,17 +178,16 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-sm text-slate-500">Slot ID: {slot.id}</p>
                 </div>
-
-                {canCancel ? (
-                    <button
+                {canCancel && (
+                  <button
                     type="button"
                     disabled={isBusy}
                     onClick={() => handleCancel(slot)}
-                      className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isBusy ? 'Cancelling...' : 'Cancel Appointment'}
                   </button>
-                ) : null}
+                )}
               </div>
             </article>
           );
@@ -248,30 +196,43 @@ export default function DashboardPage() {
     );
   };
 
+  if (!user) return null;
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#ffffff,_#f4f7ff_35%,_#f8fafc_75%)] text-slate-900">
+    <main className="min-h-[calc(100vh-4rem)] bg-[radial-gradient(circle_at_top,_#ffffff,_#f4f7ff_35%,_#f8fafc_75%)] text-slate-900">
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-6 py-10 lg:px-10">
-        <header className="space-y-3 border-b border-slate-200 pb-6">
-          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-            <Link href="/" className="font-medium text-[#0f62fe] transition hover:text-[#0b57e3]">
-              Home
-            </Link>
-            <span>/</span>
-            <span>Dashboard</span>
+        <header className="space-y-3 border-b border-slate-200 pb-6 flex justify-between items-end">
+          <div>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+              <Link href="/" className="font-medium text-[#0f62fe] transition hover:text-[#0b57e3]">
+                Home
+              </Link>
+              <span>/</span>
+              <span>Dashboard</span>
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950 lg:text-4xl mt-3">Your schedule</h1>
+            <p className="max-w-2xl text-sm leading-6 text-slate-600">
+              Review upcoming appointments, monitor waitlisted items, and keep your scheduling state tidy.
+            </p>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-950 lg:text-4xl">Your schedule</h1>
-          <p className="max-w-2xl text-sm leading-6 text-slate-600">
-            Review upcoming appointments, monitor waitlisted items, and keep your scheduling state tidy.
-          </p>
         </header>
 
         <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Authenticated user</p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950">{userId}</h2>
-            <p className="mt-1 text-sm text-slate-600">The dashboard auto-authenticates with a simulated JWT.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Authenticated User</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-950">{user.id}</h2>
+            <p className="mt-1 text-sm text-slate-600">Role: {user.role}</p>
           </div>
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-4">
+            {user.role === 'USER' && (
+              <button
+                onClick={handleApplyProvider}
+                disabled={applying}
+                className="rounded-xl border border-indigo-600 bg-indigo-50 px-4 py-2.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60"
+              >
+                {applying ? 'Applying...' : 'Apply to be a Provider'}
+              </button>
+            )}
             <button
               type="button"
               onClick={loadDashboard}
@@ -322,13 +283,12 @@ export default function DashboardPage() {
                 <p className="text-sm text-slate-500">Manage active state from one place.</p>
               </div>
             </div>
-
             {renderSlots(activeTab)}
           </section>
         )}
       </div>
 
-      {toast.message ? (
+      {toast.message && (
         <div
           className={[
             'fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border px-4 py-3 shadow-lg',
@@ -346,7 +306,7 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-      ) : null}
+      )}
     </main>
   );
 }

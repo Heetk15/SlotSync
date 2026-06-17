@@ -19,6 +19,31 @@ class SlotStatus(str, enum.Enum):
     HELD = 'HELD'
     BOOKED = 'BOOKED'
 
+class UserRole(str, enum.Enum):
+    USER = 'USER'
+    PROVIDER = 'PROVIDER'
+    ADMIN = 'ADMIN'
+
+class ApplicationStatus(str, enum.Enum):
+    PENDING = 'PENDING'
+    APPROVED = 'APPROVED'
+    REJECTED = 'REJECTED'
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    username = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.USER)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class ProviderApplication(Base):
+    __tablename__ = 'provider_applications'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    status = Column(SQLEnum(ApplicationStatus), nullable=False, default=ApplicationStatus.PENDING)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
 
 class AppointmentType(Base):
     __tablename__ = 'appointment_types'
@@ -40,7 +65,7 @@ class AppointmentType(Base):
 class Provider(Base):
     __tablename__ = 'providers'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(String(255), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
     active = Column(Boolean, nullable=False, default=True)

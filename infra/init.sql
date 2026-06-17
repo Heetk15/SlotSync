@@ -1,8 +1,34 @@
--- Enable UUID generation
+-- Enable UUID and Crypto generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Enum for Slot Status to enforce state machine rules at the DB level
 CREATE TYPE slot_status AS ENUM ('AVAILABLE', 'HELD', 'BOOKED');
+
+-- Enums for User Roles and Provider Applications
+CREATE TYPE user_role AS ENUM ('USER', 'PROVIDER', 'ADMIN');
+CREATE TYPE application_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+
+-- Table: Users
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role user_role NOT NULL DEFAULT 'USER',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: Provider Applications
+CREATE TABLE provider_applications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    status application_status NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed Admin User
+INSERT INTO users (id, username, password_hash, role)
+VALUES (uuid_generate_v4(), 'admin', crypt('admin123', gen_salt('bf')), 'ADMIN');
 
 -- Table: Appointment_Types
 CREATE TABLE appointment_types (
@@ -17,7 +43,7 @@ CREATE TABLE appointment_types (
 -- Table: Providers
 CREATE TABLE providers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id VARCHAR(255) NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
     name VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     active BOOLEAN NOT NULL DEFAULT TRUE,

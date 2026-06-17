@@ -12,7 +12,7 @@ from app.worker.tasks import WorkerSettings
 import json
 
 from app.core.rate_limit import check_rate_limit
-from app.core.security import verify_token
+from app.core.security import get_current_user_id
 
 router = APIRouter(tags=["Bookings"])
 
@@ -20,7 +20,7 @@ router = APIRouter(tags=["Bookings"])
 @router.get("/my-slots")
 async def get_my_slots(
     db: AsyncSession = Depends(get_db),
-    current_user: str = Depends(verify_token),
+    current_user: str = Depends(get_current_user_id),
 ):
     result = await db.execute(
         select(Slot)
@@ -96,7 +96,7 @@ async def get_providers_for_appointment_type(type_id: str, db: AsyncSession = De
 @router.get("/slots")
 async def get_all_slots(
     db: AsyncSession = Depends(get_db),
-    _current_user: str = Depends(verify_token),
+    _current_user: str = Depends(get_current_user_id),
     provider_id: str | None = Query(default=None),
 ):
     # Uses raw SQL to bypass SQLAlchemy model mismatches during testing
@@ -124,13 +124,13 @@ async def get_all_slots(
 
 # --- EXISTING ROUTES ---
 @router.post("/", response_model=BookingResponse, dependencies=[Depends(check_rate_limit)])
-async def book_slot(request: BookingRequest, db: AsyncSession = Depends(get_db), current_user: str = Depends(verify_token)):
+async def book_slot(request: BookingRequest, db: AsyncSession = Depends(get_db), current_user: str = Depends(get_current_user_id)):
     result = await attempt_booking(db, request, current_user)
     await broadcast_slot_state(str(request.slot_id), result.status, result.message)
     return result
 
 @router.delete("/{slot_id}")
-async def cancel_slot(slot_id: str, db: AsyncSession = Depends(get_db), current_user: str = Depends(verify_token)):
+async def cancel_slot(slot_id: str, db: AsyncSession = Depends(get_db), current_user: str = Depends(get_current_user_id)):
     await cancel_booking(db, slot_id, current_user)
     await broadcast_slot_state(slot_id, "HELD", "Processing slot availability...")
     

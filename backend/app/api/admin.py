@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.security import verify_token
-from app.db.models import AppointmentType, Provider
+from app.core.security import verify_admin
+from app.db.models import AppointmentType, Provider, ProviderApplication, ApplicationStatus, User, UserRole
 from app.db.session import get_db
 from app.schemas.booking import (
     AppointmentTypeCreate,
@@ -20,7 +20,7 @@ router = APIRouter(tags=["Admin"])
 async def create_appointment_type(
     payload: AppointmentTypeCreate,
     db: AsyncSession = Depends(get_db),
-    _current_user: str = Depends(verify_token),
+    _current_user: str = Depends(verify_admin),
 ):
     appointment_type = AppointmentType(**payload.model_dump())
     db.add(appointment_type)
@@ -33,7 +33,7 @@ async def create_appointment_type(
 async def create_provider(
     payload: ProviderCreate,
     db: AsyncSession = Depends(get_db),
-    _current_user: str = Depends(verify_token),
+    _current_user: str = Depends(verify_admin),
 ):
     provider = Provider(**payload.model_dump())
     db.add(provider)
@@ -47,7 +47,7 @@ async def attach_type_to_provider(
     provider_id: str,
     payload: AssignAppointmentTypeRequest,
     db: AsyncSession = Depends(get_db),
-    _current_user: str = Depends(verify_token),
+    _current_user: str = Depends(verify_admin),
 ):
     provider_result = await db.execute(select(Provider).where(Provider.id == provider_id))
     provider = provider_result.scalars().first()
@@ -66,3 +66,53 @@ async def attach_type_to_provider(
 
     await db.commit()
     return {"status": "linked", "provider_id": str(provider.id), "appointment_type_id": str(appointment_type.id)}
+
+@router.get("/applications")
+async def get_applications(
+    db: AsyncSession = Depends(get_db),
+    _current_user: str = Depends(verify_admin),
+):
+    result = await db.execute(select(ProviderApplication, User).join(User, ProviderApplication.user_id == User.id).where(ProviderApplication.status == ApplicationStatus.PENDING))
+    
+    applications = []
+    for app, user in result.all():
+        applications.append({
+            "id": str(app.id),
+            "user_id": str(app.user_id),
+            "username": user.username,
+            "status": app.status.value,
+            "created_at": app.created_at.isoformat() if app.created_at else None
+        })
+    return applications
+
+@router.post("/applications/{app_id}/approve")
+async def approve_application(
+    app_id: str,
+    db: AsyncSession = Depends(get_db),
+    _current_user: str = Depends(verify_admin),
+):
+    result = await db.execute(select(ProviderApplication).where(ProviderApplication.id == app_id))
+    application = result.scalars().first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+        
+    if application.status != ApplicationStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Application is not in PENDING status")
+        
+    application.status = ApplicationStatus.APPROVED
+    
+    user_result = await db.execute(select(User).where(User.id == application.user_id))
+    user = user_result.scalars().first()
+    if user:
+        user.role = UserRole.PROVIDER
+        
+    new_provider = Provider(
+        user_id=application.user_id,
+        name=user.username,
+        description="Newly approved provider",
+        active=True
+    )
+    db.add(new_provider)
+    await db.commit()
+    
+    return {"status": "Approved", "provider_id": str(new_provider.id)}

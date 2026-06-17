@@ -1,28 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-async function fetchAccessToken(userId) {
-  const response = await fetch(`${API_URL}/auth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id: userId }),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.detail || 'Authentication failed.');
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
-
 export default function ProviderPage() {
-  const [authUserId, setAuthUserId] = useState('provider_001');
-  const [authToken, setAuthToken] = useState('');
+  const { user } = useAuth();
+  const router = useRouter();
+  
   const [providerId, setProviderId] = useState('');
   const [form, setForm] = useState({
     date: '',
@@ -31,61 +18,46 @@ export default function ProviderPage() {
     duration_minutes: 30,
   });
   const [slots, setSlots] = useState([]);
-  const [statusMessage, setStatusMessage] = useState('Authenticate, choose a provider, and generate slots.');
+  const [statusMessage, setStatusMessage] = useState('Enter your provider ID and generate slots.');
   const [busy, setBusy] = useState('');
 
-  const canQuery = useMemo(() => Boolean(authToken && providerId), [authToken, providerId]);
-
-  const authenticate = async () => {
-    setBusy('auth');
-    setStatusMessage('');
-    try {
-      const token = await fetchAccessToken(authUserId.trim());
-      setAuthToken(token);
-      setStatusMessage(`Authenticated as ${authUserId.trim()}.`);
-    } catch (error) {
-      setStatusMessage(error.message);
-    } finally {
-      setBusy('');
+  useEffect(() => {
+    if (user && user.role !== 'PROVIDER' && user.role !== 'ADMIN') {
+      router.push('/dashboard');
     }
-  };
+  }, [user, router]);
+
+  const canQuery = Boolean(user && providerId);
 
   const authorizedFetch = useCallback(async (path, options = {}) => {
-    if (!authToken) {
-      throw new Error('Authenticate first.');
-    }
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('Authenticate first.');
 
     const response = await fetch(`${API_URL}${path}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`,
+        Authorization: `Bearer ${token}`,
         ...(options.headers || {}),
       },
     });
 
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.detail || 'Request failed.');
-    }
+    if (!response.ok) throw new Error(data.detail || 'Request failed.');
 
     return data;
-  }, [authToken]);
+  }, []);
 
   const loadSlots = useCallback(async () => {
-    if (!authToken || !providerId.trim()) {
-      return;
-    }
+    if (!user || !providerId.trim()) return;
 
     const params = new URLSearchParams({ provider_id: providerId.trim() });
     const data = await authorizedFetch(`/bookings/slots?${params.toString()}`, { method: 'GET' });
     setSlots(data);
-  }, [authToken, providerId, authorizedFetch]);
+  }, [user, providerId, authorizedFetch]);
 
   useEffect(() => {
-    if (!canQuery) {
-      return;
-    }
+    if (!canQuery) return;
 
     let cancelled = false;
 
@@ -93,26 +65,17 @@ export default function ProviderPage() {
       setBusy('load');
       try {
         await loadSlots();
-
-        if (!cancelled) {
-          setStatusMessage('Slots refreshed.');
-        }
+        if (!cancelled) setStatusMessage('Slots refreshed.');
       } catch (error) {
-        if (!cancelled) {
-          setStatusMessage(error.message);
-        }
+        if (!cancelled) setStatusMessage(error.message);
       } finally {
-        if (!cancelled) {
-          setBusy('');
-        }
+        if (!cancelled) setBusy('');
       }
     };
 
     fetchSlots();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [canQuery, loadSlots]);
 
   const generateSlots = async (event) => {
@@ -138,6 +101,8 @@ export default function ProviderPage() {
     }
   };
 
+  if (!user || (user.role !== 'PROVIDER' && user.role !== 'ADMIN')) return null;
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#ffffff,_#f4f7ff_30%,_#f8fafc_72%)] text-slate-900">
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-6 py-10 lg:px-10">
@@ -158,29 +123,10 @@ export default function ProviderPage() {
         <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1.3fr_1fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Authentication</p>
-            <h2 className="mt-1 text-lg font-semibold text-slate-950">Bearer token</h2>
+            <h2 className="mt-1 text-lg font-semibold text-slate-950">Active Session</h2>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Attach the token to every provider request before loading or generating slots.
+              You are authenticated as {user.id}.
             </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="flex-1 space-y-1 text-sm font-medium text-slate-700">
-              <span>User ID</span>
-              <input
-                type="text"
-                value={authUserId}
-                onChange={(event) => setAuthUserId(event.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={authenticate}
-              className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/20 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={busy === 'auth'}
-            >
-              {busy === 'auth' ? 'Authenticating...' : authToken ? 'Refresh token' : 'Authenticate'}
-            </button>
           </div>
         </section>
 
@@ -197,7 +143,7 @@ export default function ProviderPage() {
                   type="text"
                   value={providerId}
                   onChange={(event) => setProviderId(event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white"
                   required
                 />
               </label>
@@ -208,7 +154,7 @@ export default function ProviderPage() {
                     type="date"
                     value={form.date}
                     onChange={(event) => setForm((current) => ({ ...current, date: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white"
                     required
                   />
                 </label>
@@ -219,7 +165,7 @@ export default function ProviderPage() {
                     min="1"
                     value={form.duration_minutes}
                     onChange={(event) => setForm((current) => ({ ...current, duration_minutes: Number(event.target.value) }))}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white"
                     required
                   />
                 </label>
@@ -231,7 +177,7 @@ export default function ProviderPage() {
                     type="time"
                     value={form.start_time}
                     onChange={(event) => setForm((current) => ({ ...current, start_time: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#0f62fe] focus:ring-2 focus:ring-[#0f62fe]/20 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white"
                     required
                   />
                 </label>
@@ -241,7 +187,7 @@ export default function ProviderPage() {
                     type="time"
                     value={form.end_time}
                     onChange={(event) => setForm((current) => ({ ...current, end_time: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:bg-white"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:bg-white"
                     required
                   />
                 </label>
@@ -249,7 +195,7 @@ export default function ProviderPage() {
               <button
                 type="submit"
                 disabled={!canQuery || busy === 'generate'}
-                className="w-full rounded-xl bg-[#0f62fe] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0b57e3] focus:outline-none focus:ring-2 focus:ring-[#0f62fe]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busy === 'generate' ? 'Generating...' : 'Generate slots'}
               </button>

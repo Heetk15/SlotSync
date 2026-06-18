@@ -33,13 +33,14 @@ fake = Faker()
 
 async def clear_database(session: AsyncSession):
     print("Clearing existing data...")
-    # Using raw SQL to handle cascade deletions effectively
+    # Safely wipes old data without destroying your tables or ENUMs
     await session.execute(text("TRUNCATE TABLE slots, provider_appointment_types, appointment_types, providers, provider_applications, users CASCADE"))
     await session.commit()
     print("Database cleared.")
 
 async def seed_db():
     async with AsyncSessionLocal() as session:
+        # We re-enabled this so you don't get duplicate 'admin' errors!
         await clear_database(session)
 
         print("Seeding database...")
@@ -78,6 +79,9 @@ async def seed_db():
                 role=UserRole.PROVIDER
             )
             session.add(provider_user)
+            
+            # ---> FIX: Force DB to save the user so the ID exists <---
+            await session.flush() 
             
             provider = Provider(
                 id=uuid.uuid4(),

@@ -145,6 +145,8 @@ export default function BookingPage() {
     if (!modalSlot) return;
     setBookingBusy(true);
     
+    const idempotencyKey = crypto.randomUUID();
+
     try {
       if (isWaitlistModal) {
         const data = await authorizedFetch('/waitlist/join', {
@@ -155,7 +157,7 @@ export default function BookingPage() {
       } else {
         const data = await authorizedFetch('/bookings/', {
           method: 'POST',
-          body: JSON.stringify({ slot_id: modalSlot.id }),
+          body: JSON.stringify({ slot_id: modalSlot.id, idempotency_key: idempotencyKey }),
         });
         setToast({ type: 'success', message: 'Booking confirmed!' });
       }

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import insert, select
@@ -14,15 +15,15 @@ router = APIRouter(tags=["Providers"])
 
 @router.get("/search")
 async def search_providers(
-    name: str = Query(..., min_length=1),
+    name: Optional[str] = Query(""),
     db: AsyncSession = Depends(get_db),
     _current_user: str = Depends(get_current_user_id),
 ):
-    result = await db.execute(
-        select(Provider)
-        .where(Provider.name.ilike(f"%{name}%"))
-        .where(Provider.active == True)
-    )
+    query = select(Provider).where(Provider.active == True)
+    if name:
+        query = query.where(Provider.name.ilike(f"%{name}%"))
+        
+    result = await db.execute(query)
     providers = result.scalars().all()
     
     return [

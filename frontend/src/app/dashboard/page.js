@@ -144,7 +144,6 @@ export default function DashboardPage() {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
     setSearching(true);
     setHasSearched(true);
     try {

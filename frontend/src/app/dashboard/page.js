@@ -304,7 +304,7 @@ export default function DashboardPage() {
                   {searching ? (
                     <li className="px-4 py-3 text-sm text-slate-500">Searching...</li>
                   ) : searchResults.length === 0 ? (
-                    <li className="px-4 py-3 text-sm text-slate-500">No providers found matching "{searchQuery}".</li>
+                    <li className="px-4 py-3 text-sm text-slate-500">No providers found matching &quot;{searchQuery}&quot;.</li>
                   ) : (
                     searchResults.map(provider => (
                       <li 

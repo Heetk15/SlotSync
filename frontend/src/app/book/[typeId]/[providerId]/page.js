@@ -211,25 +211,28 @@ export default function BookingPage() {
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">Select a Date</h2>
               <div className="flex overflow-x-auto pb-4 gap-3 snap-x scrollbar-hide">
-                {groupedSlots.map(group => (
-                  <button
-                    key={group.dateStr}
-                    onClick={() => setSelectedDateStr(group.dateStr)}
-                    className={[
-                      "flex-shrink-0 snap-start flex flex-col items-center justify-center w-24 h-28 rounded-2xl border transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20",
-                      selectedDateStr === group.dateStr
-                        ? "border-indigo-600 bg-indigo-600 text-white shadow-md"
-                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-indigo-300 hover:bg-slate-100"
-                    ].join(' ')}
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wider opacity-80">
-                      {group.dateStr.split(' ')[0]}
-                    </span>
-                    <span className="text-3xl font-bold mt-1">
-                      {group.dateStr.split(' ')[1]}
-                    </span>
-                  </button>
-                ))}
+                {groupedSlots.map(group => {
+                  const dateParts = group.dateStr.split(' ');
+                  return (
+                    <button
+                      key={group.dateStr}
+                      onClick={() => setSelectedDateStr(group.dateStr)}
+                      className={[
+                        "flex-shrink-0 snap-start flex flex-col items-center justify-center w-24 h-28 rounded-2xl border transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20",
+                        selectedDateStr === group.dateStr
+                          ? "border-indigo-600 bg-indigo-600 text-white shadow-md"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-indigo-300 hover:bg-slate-100"
+                      ].join(' ')}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider opacity-80">
+                        {dateParts[0]} {dateParts[1]}
+                      </span>
+                      <span className="text-3xl font-bold mt-1">
+                        {dateParts[2]}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

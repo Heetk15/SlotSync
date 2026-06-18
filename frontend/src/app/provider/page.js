@@ -87,24 +87,14 @@ export default function ProviderPage() {
     setBusy('generate');
     setStatusMessage('');
 
-    try {
-      const offset = -(new Date(`${form.date}T${form.start_time}`).getTimezoneOffset());
-      const sign = offset >= 0 ? '+' : '-';
-      const pad = (num) => String(Math.floor(Math.abs(num))).padStart(2, '0');
-      const offsetStr = `${sign}${pad(offset / 60)}:${pad(offset % 60)}`;
-
-      const dateIso = `${form.date}T00:00:00${offsetStr}`;
-      const startTimeIso = `${form.date}T${form.start_time}:00${offsetStr}`;
-      const endTimeIso = `${form.date}T${form.end_time}:00${offsetStr}`;
-
       const data = await authorizedFetch('/providers/slots/generate', {
         method: 'POST',
         body: JSON.stringify({
+          date: form.date,
+          start_time: form.start_time,
+          end_time: form.end_time,
+          duration_minutes: Number(form.duration_minutes),
           provider_id: user.provider_id,
-          date: dateIso,
-          start_time: startTimeIso,
-          end_time: endTimeIso,
-          duration_minutes: form.duration_minutes,
         }),
       });
 

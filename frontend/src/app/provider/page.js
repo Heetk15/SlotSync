@@ -88,12 +88,19 @@ export default function ProviderPage() {
     setStatusMessage('');
 
     try {
+      const startDateTime = new Date(`${form.date}T${form.start_time}`);
+      const endDateTime = new Date(`${form.date}T${form.end_time}`);
+      
+      const payloadDate = startDateTime.toISOString().split('T')[0];
+      const payloadStartTime = startDateTime.toISOString().split('T')[1].substring(0, 5) + ':00';
+      const payloadEndTime = endDateTime.toISOString().split('T')[1].substring(0, 5) + ':00';
+
       const data = await authorizedFetch('/providers/slots/generate', {
         method: 'POST',
         body: JSON.stringify({
-          date: form.date,
-          start_time: form.start_time,
-          end_time: form.end_time,
+          date: payloadDate,
+          start_time: payloadStartTime,
+          end_time: payloadEndTime,
           duration_minutes: Number(form.duration_minutes),
           provider_id: user.provider_id,
         }),

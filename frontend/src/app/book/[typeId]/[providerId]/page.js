@@ -225,10 +225,10 @@ export default function BookingPage() {
                       ].join(' ')}
                     >
                       <span className="text-xs font-semibold uppercase tracking-wider opacity-80">
-                        {dateParts[0]} {dateParts[1]}
+                        {dateParts[1]} {dateParts[2]}
                       </span>
-                      <span className="text-3xl font-bold mt-1">
-                        {dateParts[2]}
+                      <span className="text-3xl font-bold mt-1 uppercase">
+                        {dateParts[0].replace(',', '')}
                       </span>
                     </button>
                   );

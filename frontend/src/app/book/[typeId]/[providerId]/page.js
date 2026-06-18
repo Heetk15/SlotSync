@@ -219,7 +219,7 @@ export default function BookingPage() {
                       "flex-shrink-0 snap-start flex flex-col items-center justify-center w-24 h-28 rounded-2xl border transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20",
                       selectedDateStr === group.dateStr
                         ? "border-indigo-600 bg-indigo-600 text-white shadow-md"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-slate-50"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-indigo-300 hover:bg-slate-100"
                     ].join(' ')}
                   >
                     <span className="text-xs font-semibold uppercase tracking-wider opacity-80">

@@ -87,6 +87,7 @@ export default function ProviderPage() {
     setBusy('generate');
     setStatusMessage('');
 
+    try {
       const data = await authorizedFetch('/providers/slots/generate', {
         method: 'POST',
         body: JSON.stringify({

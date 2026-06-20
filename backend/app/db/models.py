@@ -82,12 +82,12 @@ class Slot(Base):
     __tablename__ = 'slots'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # NEW: The string identifier of the user who holds the booking
-    owner_id = Column(String(255), nullable=True) 
-    provider_id = Column(UUID(as_uuid=True), ForeignKey('providers.id'), nullable=True)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True) 
+    provider_id = Column(UUID(as_uuid=True), ForeignKey('providers.id'), nullable=True, index=True)
     appointment_type_id = Column(UUID(as_uuid=True), ForeignKey('appointment_types.id'), nullable=True)
-    start_time = Column(DateTime(timezone=True), nullable=False)
+    start_time = Column(DateTime(timezone=True), nullable=False, index=True)
     end_time = Column(DateTime(timezone=True), nullable=False)
-    status = Column(SQLEnum(SlotStatus), nullable=False, default=SlotStatus.AVAILABLE)
+    status = Column(SQLEnum(SlotStatus), nullable=False, default=SlotStatus.AVAILABLE, index=True)
     version = Column(Integer, nullable=False, default=1)
 
     provider = relationship('Provider', back_populates='slots')

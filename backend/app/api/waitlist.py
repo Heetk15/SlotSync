@@ -37,8 +37,11 @@ async def join_waitlist(
         "idempotency_key": f"waitlist_join_{current_user}_{request.slot_id}_{uuid.uuid4().hex[:8]}"
     }
     
-    await add_to_waitlist(request.slot_id, queue_payload)
-    position = await get_waitlist_length(request.slot_id)
+    try:
+        await add_to_waitlist(request.slot_id, queue_payload)
+        position = await get_waitlist_length(request.slot_id)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Waitlist service temporarily unavailable. Please try again later.")
     
     return {
         "status": "WAITLISTED",

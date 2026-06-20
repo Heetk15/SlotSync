@@ -60,7 +60,7 @@ CREATE TABLE provider_appointment_types (
 -- Table: Slots
 CREATE TABLE slots (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    owner_id VARCHAR(255), -- NEW: Tracks who currently owns the lock
+    owner_id UUID REFERENCES users(id) ON DELETE SET NULL, -- NEW: Tracks who currently owns the lock
     provider_id UUID REFERENCES providers(id),
     appointment_type_id UUID REFERENCES appointment_types(id),
     start_time TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -85,3 +85,9 @@ CREATE TABLE idempotency_keys (
 );
 
 CREATE INDEX idx_idempotency_expires ON idempotency_keys(expires_at);
+
+CREATE INDEX idx_slots_provider_id ON slots(provider_id);
+CREATE INDEX idx_slots_status ON slots(status);
+CREATE INDEX idx_slots_start_time ON slots(start_time);
+CREATE INDEX idx_pat_provider_id ON provider_appointment_types(provider_id);
+CREATE INDEX idx_pat_appt_type_id ON provider_appointment_types(appointment_type_id);

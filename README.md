@@ -1,92 +1,96 @@
-# SlotSync 📅
+# SlotSync
 
-SlotSync is a modern, high-performance appointment scheduling and booking platform. It provides a seamless experience for both service providers to manage their availability and users to find and book appointments with ease. 
+A distributed scheduling platform designed to handle high-concurrency booking scenarios while maintaining transactional integrity.
 
-With a focus on exceptional user experience, SlotSync includes intelligent timezone handling, real-time search, waitlisting capabilities, and a responsive, highly accessible interface.
+Built using FastAPI, PostgreSQL, Redis, ARQ, and Next.js.
 
----
+## The Problem
 
-## ✨ Features
+In traditional booking systems, multiple users attempting to reserve the same slot simultaneously can lead to:
 
-* **Provider Management:** Providers can dynamically generate time slots with full timezone awareness.
-* **Smart Booking System:** Users can search for providers in real-time with an optimized, debounced search interface.
-* **Waitlists:** Integrated waitlisting allows users to queue for booked slots and automatically get promoted if a spot opens up.
-* **Idempotent Operations:** Robust backend validation ensures secure, duplicate-free bookings using idempotency keys.
-* **Modern UI/UX:** Built with Next.js and Tailwind CSS, featuring high-contrast interactive elements and a professional design system.
-* **Async Backend:** Powered by FastAPI and SQLAlchemy for non-blocking, high-concurrency request handling.
+* Double bookings
+* Duplicate requests
+* Inconsistent state
+* Poor user experience during traffic spikes
 
----
-
-## 🛠️ Tech Stack
-
-**Frontend:**
-* [Next.js](https://nextjs.org/) (React Framework)
-* [Tailwind CSS](https://tailwindcss.com/) for styling
-* Client-side fetching and state management
-
-**Backend:**
-* [FastAPI](https://fastapi.tiangolo.com/) (Python Web Framework)
-* [SQLAlchemy](https://www.sqlalchemy.org/) (AsyncSession for database operations)
-* [Pydantic](https://docs.pydantic.dev/) for strict schema validation
-* PostgreSQL (Database)
+SlotSync was built to address these challenges through database-level concurrency control and distributed system patterns.
 
 ---
 
-## 🚀 Getting Started
+## Key Features
 
-### Prerequisites
-* Node.js (v18+)
-* Python (3.10+)
+* Secure appointment booking and cancellation
+* Provider-based scheduling and slot generation
+* Real-time slot availability using WebSockets
+* Automatic Redis-backed waitlists
+* JWT-based authentication and ownership validation
+* Idempotent booking operations
+* Redis Lua token-bucket rate limiting
+* Background waitlist promotion using ARQ workers
+
+---
+
+## Architecture Highlights
+
+### Transactional Safety
+
+Uses PostgreSQL row-level locking (`FOR UPDATE NOWAIT`) to guarantee that a slot can only be booked by a single user.
+
+### Idempotency
+
+Prevents duplicate bookings caused by retries, double-clicks, or network interruptions.
+
+### Automatic Waitlisting
+
+Failed booking attempts are automatically routed into a Redis FIFO queue and promoted when a slot becomes available.
+
+### Real-Time Updates
+
+Booking state changes are propagated through Redis Pub/Sub and delivered to connected clients via WebSockets.
+
+---
+
+## Tech Stack
+
+**Frontend**
+
+* Next.js
+* React
+* Tailwind CSS
+
+**Backend**
+
+* FastAPI
+* SQLAlchemy
+* Pydantic
+
+**Data & Infrastructure**
+
 * PostgreSQL
-
-### 1. Backend Setup
-Navigate to the `backend` directory and set up your Python environment:
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-Set up your `.env` variables and start the FastAPI server:
-```bash
-uvicorn app.main:app --reload
-```
-
-### 2. Frontend Setup
-Navigate to the `frontend` directory and install dependencies:
-
-```bash
-cd frontend
-npm install
-```
-
-Set up your `.env.local` file with your API URL:
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-Start the Next.js development server:
-```bash
-npm run dev
-```
+* Redis
+* ARQ
+* Docker
+* Render
+* Vercel
+* Neon
+* Upstash
 
 ---
 
-## 📂 Project Structure
+## Concepts Demonstrated
 
-* `/frontend` - Next.js application containing pages, contexts, and UI components.
-  * `/src/app/book` - Dynamic routing for the booking interface.
-  * `/src/app/provider` - Provider workspace for slot generation.
-  * `/src/app/dashboard` - User dashboard for managing appointments.
-* `/backend` - FastAPI application.
-  * `/app/api` - RESTful route handlers (providers, bookings, auth, waitlist).
-  * `/app/schemas` - Pydantic models for request/response validation.
-  * `/app/db` - SQLAlchemy models and database session management.
-* `/infra` - Infrastructure and database initialization scripts.
+* ACID Transactions
+* Pessimistic Locking
+* Idempotency
+* Distributed Queueing
+* Dead Letter Queues
+* Pub/Sub Messaging
+* Rate Limiting
+* JWT Authentication
+* Event-Driven Architecture
 
 ---
 
-## 🤝 Contributing
-Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
+## Author
+
+**Heet Kothari**
